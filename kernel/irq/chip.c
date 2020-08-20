@@ -163,6 +163,20 @@ struct irq_data *irq_get_irq_data(unsigned int irq)
 }
 EXPORT_SYMBOL_GPL(irq_get_irq_data);
 
+#ifdef CONFIG_XEN
+int xen_set_irq_info(unsigned int irq, struct irq_info *data)
+{
+	unsigned long flags;
+	struct irq_desc *desc = irq_get_desc_lock(irq, &flags, 0);
+
+	if (!desc)
+		return -EINVAL;
+	desc->irq_common_data.xen_irq_info = data;
+	irq_put_desc_unlock(desc, flags);
+	return 0;
+}
+#endif
+
 static void irq_state_clr_disabled(struct irq_desc *desc)
 {
 	irqd_clear(&desc->irq_data, IRQD_IRQ_DISABLED);
