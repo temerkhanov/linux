@@ -152,7 +152,7 @@ int get_evtchn_to_irq(unsigned evtchn)
 }
 
 /* Constructors for packed IRQ information. */
-static int xen_irq_info_common_setup(struct irq_info *info,
+static int xen_irq_info_common_setup(struct xen_irq_info *info,
 				     unsigned irq,
 				     enum xen_irq_type type,
 				     unsigned evtchn,
@@ -179,7 +179,7 @@ static int xen_irq_info_common_setup(struct irq_info *info,
 static int xen_irq_info_evtchn_setup(unsigned irq,
 				     unsigned evtchn)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	return xen_irq_info_common_setup(info, irq, IRQT_EVTCHN, evtchn, 0);
 }
@@ -189,7 +189,7 @@ static int xen_irq_info_ipi_setup(unsigned cpu,
 				  unsigned evtchn,
 				  enum ipi_vector ipi)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	info->u.ipi = ipi;
 
@@ -203,7 +203,7 @@ static int xen_irq_info_virq_setup(unsigned cpu,
 				   unsigned evtchn,
 				   unsigned virq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	info->u.virq = virq;
 
@@ -219,7 +219,7 @@ static int xen_irq_info_pirq_setup(unsigned irq,
 				   uint16_t domid,
 				   unsigned char flags)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	info->u.pirq.pirq = pirq;
 	info->u.pirq.gsi = gsi;
@@ -229,7 +229,7 @@ static int xen_irq_info_pirq_setup(unsigned irq,
 	return xen_irq_info_common_setup(info, irq, IRQT_PIRQ, evtchn, 0);
 }
 
-static void xen_irq_info_cleanup(struct irq_info *info)
+static void xen_irq_info_cleanup(struct xen_irq_info *info)
 {
 	set_evtchn_to_irq(info->evtchn, -1);
 	info->evtchn = 0;
@@ -259,7 +259,7 @@ int irq_from_virq(unsigned int cpu, unsigned int virq)
 
 static enum ipi_vector ipi_from_irq(unsigned irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	BUG_ON(info == NULL);
 	BUG_ON(info->type != IRQT_IPI);
@@ -269,7 +269,7 @@ static enum ipi_vector ipi_from_irq(unsigned irq)
 
 static unsigned virq_from_irq(unsigned irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	BUG_ON(info == NULL);
 	BUG_ON(info->type != IRQT_VIRQ);
@@ -279,7 +279,7 @@ static unsigned virq_from_irq(unsigned irq)
 
 static unsigned pirq_from_irq(unsigned irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	BUG_ON(info == NULL);
 	BUG_ON(info->type != IRQT_PIRQ);
@@ -317,7 +317,7 @@ static bool pirq_check_eoi_map(unsigned irq)
 
 static bool pirq_needs_eoi_flag(unsigned irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 	BUG_ON(info->type != IRQT_PIRQ);
 
 	return info->u.pirq.flags & PIRQ_NEEDS_EOI;
@@ -326,7 +326,7 @@ static bool pirq_needs_eoi_flag(unsigned irq)
 static void bind_evtchn_to_cpu(unsigned int chn, unsigned int cpu)
 {
 	int irq = get_evtchn_to_irq(chn);
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	BUG_ON(irq == -1);
 #ifdef CONFIG_SMP
@@ -356,7 +356,7 @@ EXPORT_SYMBOL_GPL(notify_remote_via_irq);
 
 static void xen_irq_init(unsigned irq)
 {
-	struct irq_info *info;
+	struct xen_irq_info *info;
 #ifdef CONFIG_SMP
 	/* By default all event channels notify CPU#0. */
 	cpumask_copy(irq_get_affinity_mask(irq), cpumask_of(0));
@@ -418,7 +418,7 @@ static int __must_check xen_allocate_irq_gsi(unsigned gsi)
 
 static void xen_free_irq(unsigned irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_data(irq);
 
 	if (WARN_ON(!info))
 		return;
@@ -450,7 +450,7 @@ static void xen_evtchn_close(unsigned int port)
 static void pirq_query_unmask(int irq)
 {
 	struct physdev_irq_status_query irq_status;
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	BUG_ON(info->type != IRQT_PIRQ);
 
@@ -500,7 +500,7 @@ static void mask_ack_pirq(struct irq_data *data)
 static unsigned int __startup_pirq(unsigned int irq)
 {
 	struct evtchn_bind_pirq bind_pirq;
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 	int evtchn = evtchn_from_irq(irq);
 	int rc;
 
@@ -553,7 +553,7 @@ static unsigned int startup_pirq(struct irq_data *data)
 static void shutdown_pirq(struct irq_data *data)
 {
 	unsigned int irq = data->irq;
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 	unsigned evtchn = evtchn_from_irq(irq);
 
 	BUG_ON(info->type != IRQT_PIRQ);
@@ -578,7 +578,7 @@ static void disable_pirq(struct irq_data *data)
 
 int xen_irq_from_gsi(unsigned gsi)
 {
-	struct irq_info *info;
+	struct xen_irq_info *info;
 
 	list_for_each_entry(info, &xen_irq_list_head, list) {
 		if (info->type != IRQT_PIRQ)
@@ -595,7 +595,7 @@ EXPORT_SYMBOL_GPL(xen_irq_from_gsi);
 static void __unbind_from_irq(unsigned int irq)
 {
 	int evtchn = evtchn_from_irq(irq);
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = irq_get_handler_data(irq);
 
 	if (info->refcnt > 0) {
 		info->refcnt--;
@@ -757,7 +757,7 @@ error_irq:
 int xen_destroy_irq(int irq)
 {
 	struct physdev_unmap_pirq unmap_irq;
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 	int rc = -ENOENT;
 
 	mutex_lock(&irq_mapping_update_lock);
@@ -795,7 +795,7 @@ int xen_irq_from_pirq(unsigned pirq)
 {
 	int irq;
 
-	struct irq_info *info;
+	struct xen_irq_info *info;
 
 	mutex_lock(&irq_mapping_update_lock);
 
@@ -849,7 +849,7 @@ int bind_evtchn_to_irq(unsigned int evtchn)
 		/* New interdomain events are bound to VCPU 0. */
 		bind_evtchn_to_cpu(evtchn, 0);
 	} else {
-		struct irq_info *info = xen_get_irq_info(irq);
+		struct xen_irq_info *info = xen_get_irq_info(irq);
 		WARN_ON(info == NULL || info->type != IRQT_EVTCHN);
 	}
 
@@ -892,7 +892,7 @@ static int bind_ipi_to_irq(unsigned int ipi, unsigned int cpu)
 		}
 		bind_evtchn_to_cpu(evtchn, cpu);
 	} else {
-		struct irq_info *info = xen_get_irq_info(irq);
+		struct xen_irq_info *info = xen_get_irq_info(irq);
 		WARN_ON(info == NULL || info->type != IRQT_IPI);
 	}
 
@@ -995,7 +995,7 @@ int bind_virq_to_irq(unsigned int virq, unsigned int cpu, bool percpu)
 
 		bind_evtchn_to_cpu(evtchn, cpu);
 	} else {
-		struct irq_info *info = xen_get_irq_info(irq);
+		struct xen_irq_info *info = xen_get_irq_info(irq);
 		WARN_ON(info == NULL || info->type != IRQT_VIRQ);
 	}
 
@@ -1099,7 +1099,7 @@ int bind_ipi_to_irqhandler(enum ipi_vector ipi,
 
 void unbind_from_irqhandler(unsigned int irq, void *dev_id)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	if (WARN_ON(!info))
 		return;
@@ -1128,7 +1128,7 @@ EXPORT_SYMBOL_GPL(xen_set_irq_priority);
 int evtchn_make_refcounted(unsigned int evtchn)
 {
 	int irq = get_evtchn_to_irq(evtchn);
-	struct irq_info *info;
+	struct xen_irq_info *info;
 
 	if (irq == -1)
 		return -ENOENT;
@@ -1149,7 +1149,7 @@ EXPORT_SYMBOL_GPL(evtchn_make_refcounted);
 int evtchn_get(unsigned int evtchn)
 {
 	int irq;
-	struct irq_info *info;
+	struct xen_irq_info *info;
 	int err = -ENOENT;
 
 	if (evtchn >= xen_evtchn_max_channels())
@@ -1257,7 +1257,7 @@ EXPORT_SYMBOL_GPL(xen_hvm_evtchn_do_upcall);
 /* Rebind a new event channel to an existing irq. */
 void rebind_evtchn_irq(int evtchn, int irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 
 	if (WARN_ON(!info))
 		return;
@@ -1406,7 +1406,7 @@ static void restore_pirqs(void)
 {
 	int pirq, rc, irq, gsi;
 	struct physdev_map_pirq map_irq;
-	struct irq_info *info;
+	struct xen_irq_info *info;
 
 	list_for_each_entry(info, &xen_irq_list_head, list) {
 		if (info->type != IRQT_PIRQ)
@@ -1545,7 +1545,7 @@ void xen_poll_irq(int irq)
 /* Check whether the IRQ line is shared with other guests. */
 int xen_test_irq_shared(int irq)
 {
-	struct irq_info *info = xen_get_irq_info(irq);
+	struct xen_irq_info *info = xen_get_irq_info(irq);
 	struct physdev_irq_status_query irq_status;
 
 	if (WARN_ON(!info))
@@ -1562,7 +1562,7 @@ EXPORT_SYMBOL_GPL(xen_test_irq_shared);
 void xen_irq_resume(void)
 {
 	unsigned int cpu;
-	struct irq_info *info;
+	struct xen_irq_info *info;
 
 	/* New event-channel space is not 'live' yet. */
 	xen_evtchn_resume();

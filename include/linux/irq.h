@@ -123,7 +123,9 @@ enum {
 
 struct msi_desc;
 struct irq_domain;
-struct irq_info;
+#ifdef CONFIG_XEN
+	struct xen_irq_info;
+#endif
 
 /**
  * struct irq_common_data - per irq data shared by all irqchips
@@ -155,7 +157,7 @@ struct irq_common_data {
 	unsigned int		ipi_offset;
 #endif
 #ifdef CONFIG_XEN
-	struct irq_info     *xen_irq_info;
+	struct xen_irq_info *xen_irq_info;
 #endif
 };
 
@@ -854,14 +856,14 @@ struct cpumask *irq_data_get_effective_affinity_mask(struct irq_data *d)
 #endif
 
 #ifdef CONFIG_XEN
-static inline struct irq_info *xen_get_irq_info(unsigned int irq)
+static inline struct xen_irq_info *xen_get_irq_info(unsigned int irq)
 {
 	struct irq_data *d = irq_get_irq_data(irq);
 
 	return d ? d->common->xen_irq_info : NULL;
 }
 
-extern int xen_set_irq_info(unsigned int irq, struct irq_info *data);
+extern int xen_set_irq_data(unsigned int irq, struct xen_irq_info *data);
 #endif
 
 unsigned int arch_dynirq_lower_bound(unsigned int from);

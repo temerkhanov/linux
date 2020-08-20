@@ -30,7 +30,7 @@ enum xen_irq_type {
  *    IPI - IPI vector
  *    EVTCHN -
  */
-struct irq_info {
+struct xen_irq_info {
 	struct list_head list;
 	int refcnt;
 	enum xen_irq_type type;	/* type */
@@ -59,8 +59,8 @@ struct evtchn_ops {
 	unsigned (*max_channels)(void);
 	unsigned (*nr_channels)(void);
 
-	int (*setup)(struct irq_info *info);
-	void (*bind_to_cpu)(struct irq_info *info, unsigned cpu);
+	int (*setup)(struct xen_irq_info *info);
+	void (*bind_to_cpu)(struct xen_irq_info *info, unsigned int cpu);
 
 	void (*clear_pending)(unsigned port);
 	void (*set_pending)(unsigned port);
@@ -78,7 +78,7 @@ extern const struct evtchn_ops *evtchn_ops;
 extern int **evtchn_to_irq;
 int get_evtchn_to_irq(unsigned int evtchn);
 
-struct irq_info *info_for_irq(unsigned irq);
+struct xen_irq_info *xen_get_irq_info(unsigned int irq);
 unsigned cpu_from_irq(unsigned irq);
 unsigned cpu_from_evtchn(unsigned int evtchn);
 
@@ -91,14 +91,14 @@ static inline unsigned xen_evtchn_max_channels(void)
  * Do any ABI specific setup for a bound event channel before it can
  * be unmasked and used.
  */
-static inline int xen_evtchn_port_setup(struct irq_info *info)
+static inline int xen_evtchn_port_setup(struct xen_irq_info *info)
 {
 	if (evtchn_ops->setup)
 		return evtchn_ops->setup(info);
 	return 0;
 }
 
-static inline void xen_evtchn_port_bind_to_cpu(struct irq_info *info,
+static inline void xen_evtchn_port_bind_to_cpu(struct xen_irq_info *info,
 					       unsigned cpu)
 {
 	evtchn_ops->bind_to_cpu(info, cpu);

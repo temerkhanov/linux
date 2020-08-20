@@ -138,7 +138,7 @@ static void init_array_page(event_word_t *array_page)
 		array_page[i] = 1 << EVTCHN_FIFO_MASKED;
 }
 
-static int evtchn_fifo_setup(struct irq_info *info)
+static int evtchn_fifo_setup(struct xen_irq_info *info)
 {
 	unsigned port = info->evtchn;
 	unsigned new_array_pages;
@@ -186,7 +186,8 @@ static int evtchn_fifo_setup(struct irq_info *info)
 	return ret;
 }
 
-static void evtchn_fifo_bind_to_cpu(struct irq_info *info, unsigned cpu)
+static void evtchn_fifo_bind_to_cpu(struct xen_irq_info *info,
+				    unsigned int cpu)
 {
 	/* no-op */
 }
